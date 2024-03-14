@@ -11,8 +11,13 @@
     let svgNode;
     let svgNode2;
     let previousGroup = null;
+    let svg;
     const width = 975;
     const height = 610;
+    let topMargin = 50;
+    const squareSize = 15;
+    const squareSpacing = 2;
+    const squaresPerLine = 50;
 
     onMount(() => {
         createSquares();
@@ -20,12 +25,12 @@
     });
 
     function createSquares() {
-        const svg = d3.select(svgNode);
+        svg = d3.select('.svg')
+            .attr("viewBox", [0, 0, width, height+topMargin])
+            .attr("width", width)
+            .attr("height", height+topMargin)
+            .attr("style", "max-width: 100%; height: auto;");
 
-        // Constants for square dimensions and spacing
-        const squareSize = 13;
-        const squareSpacing = 2;
-        const squaresPerLine = 50; // Number of squares per line
 
         // Initial position
         let x = 0;
@@ -36,6 +41,7 @@
         for (const [state, votes] of Object.entries(electoralCollegeByState)) {
             // Group element for each state
             const stateGroup = svg.append('g')
+                .attr("transform", `translate(0, ${topMargin})`)
                 .attr('class', 'state-group')
                 .attr('data-state', state)
                 .on('mouseover', function () {
@@ -79,10 +85,11 @@
             stateGroup.append('text')
                 .attr('class', 'state-label')
                 .attr('x', 0)
-                .attr('y', (squareSize + squareSpacing)*13)
-                .text(`${state} - ${votes}`)
+                .attr('y', -10)
+                .text(`${state} - ${votes} Electoral College Votes`)
                 .attr('fill', 'black')
-                .style('display', 'none'); // Initially hide the label
+                .style('display', 'none')
+                .style('font-size', '22px');
         }
 
         svg.on('click', function () {
@@ -98,14 +105,15 @@
     }
 
     function createMap() {
-        const svg = d3.select(svgNode2)
-            .attr("style", "max-width: 100%; height: auto;");
-
+        // svg = d3.select('')
+        //     .attr("style", "max-width: 100%; height: auto;");
+        const scale = 0.6;
         const path = d3.geoPath();
         // Render states
         const g = svg.append("g");
 
         const states = g.append("g")
+            .attr("transform", `translate(130, ${topMargin + (squareSize + squareSpacing) * 12}) scale(${scale})`)
             .attr('class', 'map-state')
             .selectAll("path")
             .data(topojson.feature(us, us.objects.states).features)
@@ -121,13 +129,6 @@
                 // console.log(mapState);
                 highlightState(mapState);
             });
-
-
-        g.append("path")
-            .attr("fill", "none")
-            .attr("stroke", "white")
-            .attr("stroke-linejoin", "round")
-            .attr("d", path(topojson.mesh(us, us.objects.states, (a, b) => a !== b)));
         
         svg.on('click', function () {
             // Restore original color of squares in all groups
@@ -159,35 +160,44 @@
             });
     }
 </script>
-<div class="map-title">
-    <p>County-Level 2020 Presidential Election Results</p>
-</div>
-<div>
-    <svg bind:this={svgNode} width={width} height={300} />
-    <div class="text-box">
-        <p>Even though both presidential candidates won 25 states, this does not take into account the electoral college voting system. Each state gets a certain number of electoral college votes based on their total population compared to other states, where the total number of electoral college votes of all states combined is 538; highlight different boxes or states to see how many electoral college votes each state has. Let's explore this concept a little more.</p>
+
+
+<div class="chart-container">
+    <div class="map-and-text">
+        <div class="states">
+            <svg class="svg"></svg>
+        </div>
+        <div class="text-box" style="margin-top: 50px;">
+            <b style="font-size: 20px;">County-Level 2020 Presidential Election Results</b>
+            <p>The flaw in the "both candidates won 25 states" argument is that the idea does not take into account the electoral college voting system. Each state has a certain number of electoral college votes based on their total population compared to other states, where the number of electoral votes increases as the number of residents in that state increases. In addition, the total number of electoral college votes of all states combined is 538. The electoral college votes are used to determine the presidential election winner, where the candidate with more electoral votes (not more states won) wins. Highlight different boxes or states to see how many electoral college votes that state has. <br> <br> How the electoral votes are dispersed by each state is more nuanced, however; go to the next slide to learn more.</p>
+        </div>
     </div>
-    <svg bind:this={svgNode2} viewBox="0 0 975 610" width={975} height={320} />
 </div>
 
 <style>
-.text-box {
-  position: absolute;
-  top: 200px;
-  right: 125px;
-  padding: 20px;
-  background-color: rgba(255, 255, 255, 0.8);
-  border-radius: 5px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  z-index: 10;
-  width: 300px;
-}
-.map-title {
-  top: 40px;
-  margin-left: 167px; /* Adjust the left position as needed */
-  font-size: 20px; /* Adjust the font size as needed */
-  font-weight: bold; /* Adjust the font weight as needed */
-  color: black; /* Adjust the color as needed */
-  z-index: 10; /* Ensure the title is above the map */
-}
+    .chart-container {
+        display: flex;
+        flex-direction: column;
+        margin-top: -20px;
+    }
+
+    .map-and-text {
+        display: flex;
+        margin-top: 10px;
+    }
+
+    .states {
+        flex: 7;
+    }
+
+    .text-box {
+        flex: 3;
+        padding: 20px;
+        background-color: rgba(255, 255, 255, 0.8);
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-left: 20px; 
+        width: 400px;
+    }
+
 </style>
