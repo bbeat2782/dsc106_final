@@ -30,6 +30,7 @@
     let allYearsOverallPres;
     const state_ids = new Map();
     const countyIdsByStates = new Map();
+    let countyNameId = {};
 
     const dispatch = createEventDispatcher();
 
@@ -56,6 +57,7 @@
         county.objects.counties.geometries.forEach(entry => {
             const id = entry.id;
             const state_id = id.slice(0, 2);
+            countyNameId[id] = entry.properties.name;
             
             if (countyIdsByStates.has(state_id)) {
                 countyIdsByStates.get(state_id).push(id);
@@ -63,6 +65,7 @@
                 countyIdsByStates.set(state_id, [id]);
             }
         })
+
     
 
         res = await fetch('urban.json');
@@ -202,17 +205,15 @@
   </script>
 
 <main>
-    <h1>Geospatial Breakdown of 2020 U.S. Presidential Elections</h1>
-    <!-- {#if electoralCollegeByState}
-    <ElectoralCollege {electoralCollegeByState} />
-    {/if} -->
+    <h1>Analysis of the 2020 U.S. Presidential Election</h1>
+
 
     {#if currentSlide === CountyPop && county && popValues && countyIdsByStates && statesByResult}
-        <CountyPop {county} {popValues} {countyIdsByStates} {overall_pres} {statesByResult}/>
+        <CountyPop {county} {popValues} {countyIdsByStates} {statesByResult}/>
     {:else if currentSlide === States && us && overall_pres}
         <States {us} {overall_pres} />
     {:else if currentSlide === Counties && county && county_pres && state_ids}
-        <Counties {county_pres} {county} {state_ids}/>
+        <Counties {county_pres} {county} {state_ids} {countyIdsByStates} />
     {:else if currentSlide === ElectoralCollege}
         <ElectoralCollege {electoralCollegeByState} {us} />
     {:else if currentSlide === ElectoralCollegeResult}
@@ -227,11 +228,58 @@
         <p>Loading...</p>
     {/if}
 
-    <div>
-        <button on:click={prevSlide} disabled={currentSlideIndex === 0 || isTransitioning}>Previous</button>
-        <button on:click={nextSlide} disabled={currentSlideIndex === slides.length - 1 || isTransitioning}>Next</button>
+    <div class="buttons">
+        <button class="button previous {currentSlideIndex === slides.length - 1 ? 'previous-rounded' : ''}" on:click={prevSlide} disabled={currentSlideIndex === 0 || isTransitioning} style="{currentSlide === States ? 'display: none;' : ''}">Previous</button>
+        <button class="button next {currentSlideIndex === 0 ? 'next-rounded' : ''}" on:click={nextSlide} disabled={currentSlideIndex === slides.length - 1 || isTransitioning} style="{currentSlide === DifferentYears ? 'display: none;' : ''}" >Next</button>
     </div>
 </main>
 
 <style>
+h1 {
+    margin-top: 10px;
+}
+.buttons {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+}
+
+.button {
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.previous {
+    border-top-right-radius: 0px;
+    border-bottom-right-radius: 0px;
+    border-top-left-radius: 5px;
+    border-bottom-left-radius: 5px;
+    margin-right: 0;
+}
+
+.next {
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    border-left: 1px solid #ced4da;
+}
+
+.buttons button:hover {
+    background-color: #0056b3;
+}
+
+.next-rounded {
+    border-radius: 5px;
+}
+
+.previous-rounded {
+    border-radius: 5px;
+}
 </style>
