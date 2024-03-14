@@ -12,23 +12,27 @@
 
     let caResult = [];
     let svgNode2;
+    let svg;
     let transitionSpeed = 600;
     let highlightState = 'California';
+    let topMargin = 50;
+    const squareSize = 15;
+    const squareSpacing = 2;
+    const squaresPerLine = 50;
 
     const dispatch = createEventDispatcher();
 
     onMount(() => {
-        dispatch('transitionstart')
+        dispatch('transitionstart');
         createSquares();
     });
 
     function createSquares() {
-        const svg = d3.select(svgNode);
-
-        // Constants for square dimensions and spacing
-        const squareSize = 13;
-        const squareSpacing = 2;
-        const squaresPerLine = 50; // Number of squares per line
+        svg = d3.select('.svg')
+            .attr("viewBox", [0, 0, width, height+topMargin])
+            .attr("width", width)
+            .attr("height", height+topMargin)
+            .attr("style", "max-width: 100%; height: auto;");
 
         // Initial position
         let x = 0;
@@ -40,6 +44,7 @@
 
             // Group element for each state
             const stateGroup = svg.append('g')
+                .attr("transform", `translate(0, ${topMargin})`)
                 .attr('class', 'state-group')
                 .attr('data-state', state);
 
@@ -59,15 +64,6 @@
                     .attr('height', squareSize)
                     .attr('fill', 'black');
             }
-
-            // Add state label below the squares (initially hidden)
-            stateGroup.append('text')
-                .attr('class', 'state-label')
-                .attr('x', 0)
-                .attr('y', (squareSize + squareSpacing)*13)
-                .text(`${state} - ${votes}`)
-                .attr('fill', 'black')
-                .style('display', 'none'); // Initially hide the label
         }
 
         // Apply transition to change colors
@@ -117,104 +113,151 @@
         const width = 600 - margin.left - margin.right;
         const height = 400 - margin.top - margin.bottom;
 
-        // Create SVG element
-        const svg = d3.select(svgNode2)
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
-            .append("g")
-            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
         // Create scales
-        const x = d3.scaleBand()
+        const y = d3.scaleBand()
             .domain(partyData.map(d => d.party)) // Use sorted parties
-            .range([0, width])
+            .range([0, height])
             .padding(0.1);
 
-        const y = d3.scaleLinear()
+        const x = d3.scaleLinear()
             .domain([0, 100])
-            .range([height, 0]);
+            .range([0, width]);
 
         // Create bars
-        const bars = svg.selectAll(".bar")
+        const g = svg.append("g")
+            .attr("transform", `translate(80, ${topMargin + 30 + (squareSize + squareSpacing) * 12})`);
+        g.append("text")
+            .attr("class", "chart-title")
+            .attr("x", 111)
+            .attr("y", topMargin / 2 - 40)
+            .attr("text-anchor", "middle")
+            .style("font-size", "20px")
+            .style("font-weight", "bold")
+            .text("California Voting Results")
+
+        const bars = g.selectAll(".bar")
             .data(partyData)
             .enter().append("rect")
             .attr("class", "bar")
-            .attr("x", d => x(d.party))
-            .attr("width", x.bandwidth())
-            .attr("y", height) // Initially set bars to start from the bottom
-            .attr("height", 0)
+            .attr("y", d => y(d.party))
+            .attr("height", y.bandwidth())
+            .attr("x", 0) // Initially set bars to start from the left
+            .attr("width", 0)
             .attr("fill", d => colorScale(d.party)); // Set fill color based on party
 
         // Transition bars to their correct position
         bars.transition()
-            .duration(transitionSpeed)
-            .attr("y", d => y(d.percentage))
-            .attr("height", d => height - y(d.percentage))
-            .end() // Call the function after the transition is complete
+    .duration(transitionSpeed)
+    .attr("x", 0)
+    .attr("width", d => x(d.percentage))
+    .end() // Call the function after the transition is complete
+    .then(() => {
+        // Add labels after the transition is complete
+        g.selectAll(".label")
+            .data(partyData)
+            .enter().append("text")
+            .attr("class", "label")
+            .attr("x", d => x(d.percentage) + 5)
+            .attr("y", d => y(d.party) + y.bandwidth() / 2)
+            .text(d => `${d.percentage.toFixed(2)}%`)
+            .style("opacity", 0) // Set initial opacity to 0
+            .transition()
+            .duration(200) // Duration for the text transition
+            .style("opacity", 1)
+            .end()
             .then(() => {
-                // Add labels after the transition is complete
-                svg.selectAll(".label")
-                    .data(partyData)
-                    .enter().append("text")
-                    .attr("class", "label")
-                    .attr("x", d => x(d.party) + x.bandwidth() / 2)
-                    .attr("y", d => y(d.percentage) - 5)
-                    .attr("text-anchor", "middle")
-                    .text(d => `${d.percentage.toFixed(2)}%`)
-                    .style("opacity", 0) // Set initial opacity to 0
-                    .transition()
-                    .duration(200) // Duration for the text transition
-                    .style("opacity", 1)
-                    .end()
-                    .then(() => {
-                        d3.selectAll(`.state-group[data-state="${highlightState}"] rect`)
-                            .transition()
-                            .duration(200) // Duration for the color transition
-                            .attr('fill', colorScale(partyData[0].party))
-                            .end().then(() => {dispatch('transitionend')});
-                    })
-            });
+                const firstSquare = d3.select(`.state-group[data-state="${highlightState}"] rect`).nodes()[0];
+                const xPosition = +firstSquare.getAttribute("x");
+                const yPosition = +firstSquare.getAttribute("y") + topMargin;
 
-        // Add X axis
-        svg.append("g")
-            .attr("transform", "translate(0," + height + ")")
-            .call(d3.axisBottom(x));
+                const initialXPosition = x(partyData[0].percentage) + 80 - squareSize;
+                const initialYPosition = y(partyData[0].party) + topMargin + 30 + (squareSize + squareSpacing) * 12;
+
+                svg.append("rect")
+                    .attr("class", "animation-square")
+                    .attr("x", initialXPosition)
+                    .attr("y", initialYPosition)
+                    .attr("width", squareSize)
+                    .attr("height", squareSize)
+                    .attr("fill", colorScale(partyData[0].party))
+                    .transition()
+                    .duration(1000)
+                    .attr("x", xPosition)
+                    .attr("y", yPosition)
+                    .on("end", () => {
+                        // Once animation-square reaches the first square, apply transitions to other squares
+                        d3.selectAll(`.state-group[data-state="${highlightState}"] rect`)
+                            .each(function(d, i) {
+                                if (i > 0) {
+                                    d3.select(this)
+                                        .transition()
+                                        .delay(i * 25)
+                                        .duration(25)
+                                        .attr('fill', colorScale(partyData[0].party))
+                                        .end()
+                                        .then(() => {
+                                            if (i === partyData.length - 1) {
+                                                dispatch('transitionend');
+                                            }
+                                        });
+                                }
+                            });
+                    });
+            });
+    });
+
 
         // Add Y axis
-        svg.append("g")
-            .call(d3.axisLeft(y).ticks(10));
+        g.append("g")
+            .call(d3.axisLeft(y));
+
+        // Add X axis
+        g.append("g")
+            .attr("transform", "translate(0," + height + ")")
+            .call(d3.axisBottom(x).ticks(10)
+            .tickFormat(d => `${d}%`));
     }
 
+
 </script>
-<div class="map-title">
-    <p>Electoral College Voting System: Winner Takes All</p>
-</div>
-<div>
-    <svg bind:this={svgNode} width={width} height={200} />
-    <div class="text-box">
-        <p>Not all states assign their electoral votes the same. 48 states do a winner take all system, where the candidate with the most votes for that state receive all electoral votes assigned to the state. This is the case for California, where Joe Biden received 63% of the votes. Because Joe Biden received the most votes in the state, he got all 55 electoral votes from California.</p>
+
+
+<div class="chart-container">
+    <div class="map-and-text">
+        <div class="states">
+            <svg class="svg"></svg>
+        </div>
+        <div class="text-box" style="margin-top: 50px;">
+            <b style="font-size: 20px;">Electoral College Voting System: Winner-Takes-All</b>
+            <p>Not all states assign their electoral votes the same. 48 states do a winner-take-all system, where the candidate with the most votes in that state receive all electoral votes assigned to the state. This is the case for California. Because Joe Biden received the most votes in the state (63%), he got all 55 electoral votes from California. <br> <br> <span style="font-weight: bold;">What about the two other states?</span></p>
+        </div>
     </div>
-    <svg bind:this={svgNode2} width={width} height={420} />
 </div>
 
 <style>
-.text-box {
-  position: absolute;
-  top: 225px; 
-  right: 125px;
-  padding: 20px;
-  background-color: rgba(255, 255, 255, 0.8);
-  border-radius: 5px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  z-index: 10;
-  width: 300px; 
-}
-.map-title {
-  top: 40px;
-  margin-left: 157px; /* Adjust the left position as needed */
-  font-size: 20px; /* Adjust the font size as needed */
-  font-weight: bold; /* Adjust the font weight as needed */
-  color: black; /* Adjust the color as needed */
-  z-index: 10; /* Ensure the title is above the map */
-}
+    .chart-container {
+        display: flex;
+        flex-direction: column;
+        margin-top: -20px; /* Adjusted to reduce the gap */
+    }
+    
+    .map-and-text {
+        display: flex;
+        margin-top: 10px;
+    }
+
+
+    .states {
+        flex: 7;
+    }
+    
+    .text-box {
+        flex: 3;
+        padding: 20px;
+        background-color: rgba(255, 255, 255, 0.8);
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-left: 20px;
+        width: 400px;
+    }
 </style>
