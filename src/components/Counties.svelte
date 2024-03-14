@@ -154,7 +154,7 @@
         } else if (winner === "republican") {
             return redScale(winPercentage);
         } else {
-            return "black";
+            return "black"; // TODO Handle other cases
         }
       } catch(err) {
         return 'black';
@@ -212,8 +212,6 @@
       .attr("fill", "transparent")
       .attr("cursor", "pointer")
       .on("click", clicked);
-
-    
 
     
     // zoom-in implementation
