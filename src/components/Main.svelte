@@ -205,8 +205,7 @@
   </script>
 
 <main>
-    <h1>Analysis of the 2020 U.S. Presidential Election</h1>
-
+    <h1>Analysis of the 2020 U.S. Presidential Election <span style='font-size: 65%;'>[<a href='https://www.youtube.com/watch?v=r2QXTEatkf8' style='color: #007bff; text-decoration: none; font-weight: bold;'>Demo Video</a>]</span></h1>
 
     {#if currentSlide === CountyPop && county && popValues && countyIdsByStates && statesByResult}
         <CountyPop {county} {popValues} {countyIdsByStates} {statesByResult}/>
